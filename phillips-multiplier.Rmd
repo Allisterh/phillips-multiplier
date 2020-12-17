@@ -232,41 +232,16 @@ p_f <-
 p_f
 ```
 
-## Plot $\mathcal{R}_{h}^{\bar{\pi}}$
-```{r irf_pi}
-p_pi <- 
-  results %>% 
-  ggplot(aes(h, vBetaPi)) +
-  geom_line(size = 1, color = "black") +
-  geom_ribbon(
-    aes(ymin = vLowerPI, ymax = vUpperPI),
-    fill = "#05827e",
-    alpha = 0.2
-  ) +
-  geom_hline(aes(yintercept = 0), linetype = 2) +
-  xlim(0, iH) +
-  labs(
-    x = "Quarters",
-    y = TeX("$R_{h}^{\\bar{\\pi}}$"),
-    subtitle = ""
-  ) +
-  theme_ipsum() +
-  theme(
-    axis.title.x=element_text(size=14),
-    axis.title.y=element_text(size=12)
-  )
-
-p_pi
-```
-
 ## Plot $\mathcal{R}_{h}^{\bar{u}}$
 ```{r irf_u}
+irf_scale <- max(results$vBetaUr) #rescale IRFs so that ir of ur peaks at 1
+
 p_ur <- 
   results %>% 
-  ggplot(aes(h, vBetaUr)) +
+  ggplot(aes(h, vBetaUr/irf_scale)) +
   geom_line(size = 1, color = "black") +
   geom_ribbon(
-    aes(ymin = vLowerUR, ymax = vUpperUR),
+    aes(ymin = vLowerUR/irf_scale, ymax = vUpperUR/irf_scale),
     fill = "#05827e",
     alpha = 0.2
   ) +
@@ -284,6 +259,33 @@ p_ur <-
   )
 
 p_ur
+```
+
+## Plot $\mathcal{R}_{h}^{\bar{\pi}}$
+```{r irf_pi}
+p_pi <- 
+  results %>% 
+  ggplot(aes(h, vBetaPi/irf_scale)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerPI/irf_scale, ymax = vUpperPI/irf_scale),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$R_{h}^{\\bar{\\pi}}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_pi
 ```
 
 ## Plot $\mathcal{K}_{h}$
