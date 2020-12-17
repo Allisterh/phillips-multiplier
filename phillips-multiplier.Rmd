@@ -15,7 +15,7 @@ abstract: |
   The following code replicates some of the results that appear in ["The Phillips Multiplier" by Barnichon and Mesters (2020)](https://www.sciencedirect.com/science/article/abs/pii/S0304393220300520). In short, The Phillips multiplier is a statistic to non-parametrically characterize the central bank inflation-unemployment trade-off.
 ---
 
-__NOTE__: The following code cannot run simply as-is since it relies on sourcing several auxiliary functions. The easiest way to use this notebook is to clone the entire R project folder which is located here, open the project on Rstudio, and knit this R markdown notebook.
+__NOTE__: The following code cannot run simply as-is since it relies on sourcing several auxiliary functions. The easiest way to use this notebook is to clone the entire R project folder which is located [here](https://github.com/itamarcaspi/phillips-multiplier), open the project on Rstudio, and knit this R markdown notebook.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(

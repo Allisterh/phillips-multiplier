@@ -1,20 +1,20 @@
 PhillipsMultiplier <- function(vParB, iH, vPi, vU, mZ, mX, CI) {
   
-  vBeta       <- c()  # storage 2SLS point PM 
-  vBetauc     <- c()  # storage OLS point PM 
-  vBetaPi     <- c()  # storage irf pi   
-  vBetaUr     <- c()  # storage irf ur        
-  vLowerAR    <- c()  # lower AR-bound  
-  vUpperAR    <- c()  # upper AR-bound 
-  vLowerAR2s  <- c()  # lower 2SLS-bound  
-  vUpperAR2s  <- c()  # upper 2SLS-bound 
-  vLowerARuc  <- c()  # lower unconditional multiplier 
-  vUpperARuc  <- c()  # upper unconditional multiplier 
-  vLowerPI    <- c()  # lower bound AR pi irf
-  vUpperPI    <- c()  # upper bound AR pi irf 
-  vLowerUR    <- c()  # lower bound AR ur irf
-  vUpperUR    <- c()  # upper bound AR ur irf
-  vFstat      <- c()  # F-stats 
+  vBeta       <- rep(0, iH)  # storage 2SLS point PM 
+  vBetauc     <- rep(0, iH)  # storage OLS point PM 
+  vBetaPi     <- rep(0, iH)  # storage irf pi   
+  vBetaUr     <- rep(0, iH)  # storage irf ur        
+  vLowerAR    <- rep(0, iH)  # lower AR-bound  
+  vUpperAR    <- rep(0, iH)  # upper AR-bound 
+  vLowerAR2s  <- rep(0, iH)  # lower 2SLS-bound  
+  vUpperAR2s  <- rep(0, iH)  # upper 2SLS-bound 
+  vLowerARuc  <- rep(0, iH)  # lower unconditional multiplier 
+  vUpperARuc  <- rep(0, iH)  # upper unconditional multiplier 
+  vLowerPI    <- rep(0, iH)  # lower bound AR pi irf
+  vUpperPI    <- rep(0, iH)  # upper bound AR pi irf 
+  vLowerUR    <- rep(0, iH)  # lower bound AR ur irf
+  vUpperUR    <- rep(0, iH)  # upper bound AR ur irf
+  vFstat      <- rep(0, iH)  # F-stats 
   
   mWald       <- matrix(0, length(vParB), iH)   # store Wald
   mTest       <- matrix(0, length(vParB), iH)   # store rejection 
