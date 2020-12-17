@@ -51,7 +51,7 @@ paste0("functions/", list.files("functions")) %>%
 data_source <- 1                      # which data to use? 1=Romer, 2=HF
 endoLags    <- 4                      # no. of lags for endogenous variables
 iH          <- 21                     # horizon for IRF
-vParB       <- seq(-10, 5, by = 0.5) # grid of \beta parameters to test
+vParB       <- seq(-10, 5, by = 0.01) # grid of \beta parameters to test
 CI          <- 0.95                   # confidence interval
 
 set.seed(2805)                        # for replication
