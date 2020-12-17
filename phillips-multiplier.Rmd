@@ -1,0 +1,318 @@
+---
+title: "Estimating the Phillips Multiplier with R"
+author: "Itamar Caspi"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: no
+    theme: journal
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+abstract: |
+  The following code replicates some of the results that appear in ["The Phillips Multiplier" by Barnichon and Mesters (2020)](https://www.sciencedirect.com/science/article/abs/pii/S0304393220300520). In short, The Phillips multiplier is a statistic to non-parametrically characterize the central bank inflation-unemployment trade-off.
+---
+
+__NOTE__: The following code cannot run simply as-is since it relies on sourcing several auxiliary functions. The easiest way to use this notebook is to clone the entire R project folder which is located here, open the project on Rstudio, and knit this R markdown notebook.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval    = TRUE,
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Load Packages
+```{r packages}
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,  # for data wrangling and plotting
+  recipes,    # for data preprocessing
+  readxl,     # for reading xls, xlsx files
+  lubridate,  # for dealing with dates
+  hrbrthemes, # for a fancy ggplot theme
+  latex2exp   # for math symbols in plot titles
+)
+```
+
+## Source auxiliary functions
+```{r, results='hide'}
+paste0("functions/", list.files("functions")) %>% 
+  map(source)
+```
+
+## Setup
+```{r params}
+data_source <- 1                      # which data to use? 1=Romer, 2=HF
+endoLags    <- 4                      # no. of lags for endogenous variables
+iH          <- 21                     # horizon for IRF
+vParB       <- seq(-10, 5, by = 0.5) # grid of \beta parameters to test
+CI          <- 0.95                   # confidence interval
+
+set.seed(2805)                        # for replication
+```
+
+## Read data
+```{r read}
+if (data_source == 1) {
+  df_raw <- read_xls("data/DataWeakIVpm.xls") 
+} else if (data_source == 2) {
+  df_raw <- read_xlsx("data/DataWeakIVhffinal.xlsx")
+}
+```
+
+## Process data
+```{r process}
+if (data_source == 1) {
+  df <- 
+    df_raw %>%
+    mutate(
+      iv_m = iv_m1 + iv_m2 + iv_m3,
+      pi_a = pi - piE,
+      ugap = Upgap,
+      date = as_date(date_decimal(year))
+    )
+}
+if (data_source == 2) {
+  df <- 
+    df_raw %>%
+    mutate(
+      iv_m  = FF4star_G_m1 + FF4star_G_m2 + FF4star_G_m3,
+      pi    = PI_pce,
+      pi_a  = pi - PIx_pce,
+      ugap  = UR_gap,
+      date  = as_date(date_decimal(obs))
+    )
+}
+```
+
+## Select variables
+```{r select_variables}
+df_pi <- 
+  df %>% 
+  select(date, pi, ugap, iv_m)
+
+df_pi_a <- 
+  df %>% 
+  select(date, pi_a, ugap, iv_m)
+```
+
+## Plot variables
+```{r plot_vars}
+df_pi %>% 
+  pivot_longer(-date, names_to = "name", values_to = "value") %>% 
+  ggplot(aes(date, value)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~ name, scales = "free") +
+  labs(
+    x = "",
+    y = "",
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+```
+
+## Generate lags
+```{r lags}
+df_lag <-
+  recipe(~ ., data = df_pi) %>% 
+  step_lag(pi, ugap, lag = 1:endoLags) %>% 
+  prep(df_pi) %>% 
+  bake(df_pi)
+
+df_lag_a <-  
+  recipe(~ ., data = df_pi_a) %>% 
+  step_lag(pi_a, ugap, lag = 1:endoLags) %>% 
+  prep(df_pi_a) %>% 
+  bake(df_pi_a)
+```
+
+## Extract vectors and matrices
+```{r vectors}
+vPi  <- df_lag %>% pull(pi)
+mX   <- df_lag %>% select(starts_with("lag_")) %>% as.matrix()
+
+vPiA <- df_lag_a %>% pull(pi_a)
+mXA  <- df_lag_a %>% select(starts_with("lag_")) %>% as.matrix()
+
+vU   <- df_lag %>% pull(ugap)
+mZ   <- df_lag %>% pull(iv_m)
+```
+
+## Estimate
+```{r estimate}
+results <- 
+  PhillipsMultiplier(vParB, iH, vPi, vU, mZ, mX, CI) %>% 
+  as_tibble()
+
+results_a <- 
+  PhillipsMultiplier(vParB, iH, vPiA, vU, mZ, mXA, CI) %>% 
+  as_tibble()
+```
+
+## Plot $\mathcal{P}_{h}$
+```{r pm}
+p_pm <- 
+  results %>% 
+  ggplot(aes(h, vBeta)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerAR, ymax = vUpperAR),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$P_{h}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_pm
+```
+
+## Plot unconditional PM
+```{r upm}
+p_pm_uc <- 
+  results %>% 
+  ggplot(aes(h, vBetauc)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerARuc, ymax = vUpperARuc),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$P_{h}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_pm_uc
+```
+
+## Plot $F$-statistics
+```{r fstat}
+p_f <- 
+  results %>% 
+  ggplot(aes(h, vFstat)) +
+  geom_col(fill = "#05827e") +
+  theme_ipsum() +
+  labs(
+    x = "Quarters",
+    y = TeX("F-stat")
+  ) +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_f
+```
+
+## Plot $\mathcal{R}_{h}^{\bar{\pi}}$
+```{r irf_pi}
+p_pi <- 
+  results %>% 
+  ggplot(aes(h, vBetaPi)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerPI, ymax = vUpperPI),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$R_{h}^{\\bar{\\pi}}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_pi
+```
+
+## Plot $\mathcal{R}_{h}^{\bar{u}}$
+```{r irf_u}
+p_ur <- 
+  results %>% 
+  ggplot(aes(h, vBetaUr)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerUR, ymax = vUpperUR),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$R_{h}^{\\bar{u}}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_ur
+```
+
+## Plot $\mathcal{K}_{h}$
+```{r kappa}
+p_k <- 
+  results_a %>% 
+  ggplot(aes(h, vBeta)) +
+  geom_line(size = 1, color = "black") +
+  geom_ribbon(
+    aes(ymin = vLowerAR, ymax = vUpperAR),
+    fill = "#05827e",
+    alpha = 0.2
+  ) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  xlim(0, iH) +
+  labs(
+    x = "Quarters",
+    y = TeX("$\\kappa_{h}$"),
+    subtitle = ""
+  ) +
+  theme_ipsum() +
+  theme(
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=12)
+  )
+
+p_k
+```
+
+
+## References
+Barnichon, R., & Mesters, G. (2020). The Phillips Multiplier. _Journal of Monetary Economics_.
